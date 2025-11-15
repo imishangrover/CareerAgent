@@ -68,3 +68,77 @@ class CareerRoadmapView(APIView):
             },
             "source": "ai_generated"
         })
+
+class UserRoadmapListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        roadmaps = CareerRoadmap.objects.filter(user=user).order_by("-created_at")
+
+        data = [{
+            "id": r.id,
+            "career_name": r.career_name,
+            "preferences": r.preferences,
+            "created_at": r.created_at,
+            "updated_at": r.updated_at
+        } for r in roadmaps]
+
+        return Response({"roadmaps": data})
+
+class UserRoadmapDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        roadmap = get_object_or_404(CareerRoadmap, pk=pk, user=request.user)
+
+        return Response({
+            "id": roadmap.id,
+            "career_name": roadmap.career_name,
+            "roadmap": roadmap.roadmap,
+            "preferences": roadmap.preferences,
+            "reference": roadmap.reference.content if roadmap.reference else None,
+            "source_url": roadmap.reference.source_url if roadmap.reference else None,
+            "created_at": roadmap.created_at,
+            "updated_at": roadmap.updated_at
+        })
+
+class UserRoadmapDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        roadmap = get_object_or_404(CareerRoadmap, pk=pk, user=request.user)
+        roadmap.delete()
+        return Response({"message": "Roadmap deleted successfully"})
+
+class UserRoadmapRegenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        roadmap = get_object_or_404(CareerRoadmap, pk=pk, user=request.user)
+
+        new_preferences = request.data.get("preferences", {})
+        career_name = roadmap.career_name
+
+        # get reference if available
+        reference_content = (
+            roadmap.reference.content if roadmap.reference else None
+        )
+
+        # call AI again
+        new_roadmap = generate_ai_roadmap(
+            user_id=request.user.id,
+            career_name=career_name,
+            reference_content=reference_content,
+            preferences=new_preferences
+        )
+
+        # save updated roadmap
+        roadmap.roadmap = new_roadmap.get("steps", {})
+        roadmap.preferences = new_preferences
+        roadmap.save()
+
+        return Response({
+            "message": "Roadmap updated successfully",
+            "roadmap": roadmap.roadmap
+        })
