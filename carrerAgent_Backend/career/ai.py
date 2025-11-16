@@ -9,6 +9,38 @@ client = OpenAI(
     api_key=os.getenv("HF_TOKEN"),
 )
 
+def safe_json(text):
+    try:
+        return json.loads(text)
+    except:
+        return {"steps": {"Step 1": text}}
+
+def generate_ai_response(prompt):
+    """
+    Generic AI call for:
+      - Step explainer
+      - Weekly plan
+      - Skill gap analysis
+      - Mock interview
+    """
+    try:
+        completion = client.chat.completions.create(
+            model="meta-llama/Llama-4-Scout-17B-16E-Instruct",
+            messages=[
+                {"role": "system", "content": "Return valid JSON only."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=700,
+            temperature=0.6,
+        )
+
+        output = completion.choices[0].message.content
+        return safe_json(output)
+
+    except Exception as e:
+        print("AI Error:", e)
+        return {"error": "AI generation failed", "details": str(e)}
+
 def generate_ai_roadmap(user_id, career_name, reference_content=None, preferences={}):
     """
     Generate a personalized roadmap using LLaMA 4 Scout via Hugging Face OpenAI-compatible API.
