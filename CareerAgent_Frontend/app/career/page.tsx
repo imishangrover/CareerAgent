@@ -52,7 +52,7 @@ export default function CareerPage() {
               type="text"
               placeholder="e.g., Software Engineer, Product Manager, Data Scientist..."
               value={careerInput}
-              onChange={(e) => setCareerInput(e.target.value)}
+              onChange={(e) => {setCareerInput(e.target.value); localStorage.setItem("career_path", e.target.value)}}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && careerInput.trim()) {
                   handleContinue()

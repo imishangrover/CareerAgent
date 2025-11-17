@@ -25,9 +25,9 @@ export default function RoadmapPage() {
     const fetchRoadmap = async () => {
       try {
         const token = localStorage.getItem("access_token") || ""; // <-- your token
-
+        const name = localStorage.getItem("career_path") || "vue";
         const res = await axios.get(
-          "http://127.0.0.1:8000/api/career/roadmap/ios/",
+          `http://127.0.0.1:8000/api/career/roadmap/${name}`,
           {
             headers: {
               Authorization: `Bearer ${token}`, // <-- added
@@ -40,13 +40,24 @@ export default function RoadmapPage() {
 
         const parsedPhases: RoadmapPhase[] = Object.entries(steps).map(
           ([stepName, stepData], index) => {
-            // 🔥 Clean backend markdown-wrapped JSON
-            let cleaned = String(stepData)
-              .replace(/```json/g, "")
-              .replace(/```/g, "")
-              .trim();
+            let json: any = {};
 
-            const json = JSON.parse(cleaned);
+            try {
+              // clean markdown code fences if present
+              let cleaned = String(stepData)
+                .replace(/```json/g, "")
+                .replace(/```/g, "")
+                .trim();
+
+              json = JSON.parse(cleaned); // try parsing JSON
+            } catch (e) {
+              // ❗ If not JSON — treat as plain text step
+              json = {
+                name: stepName,
+                description: String(stepData),
+                skills: [],
+              };
+            }
 
             return {
               id: `phase-${index + 1}`,
